@@ -37,23 +37,6 @@
 #        不见满街漂亮妹，哪个归得程序员？
 #
 #   --------------------------------代码区--------------------------------
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-"""
-File: jd_shopFollowGift.py(关注有礼-JK)
-Author: tttccz,HarbourJ
-Date: 2022/8/8 19:52
-TG: https://t.me/HarbourToulu
-TgChat: https://t.me/HarbourChat
-cron: 1 1 1 1 1 1
-new Env('关注有礼-JK');
-ActivityEntry: https://shop.m.jd.com/?shopId=12342136
-               变量 export jd_shopFollowGiftId="店铺shopId1&店铺shopId2" #变量为店铺🆔,建议一次仅运行2-3个shopId
-                   export jd_shopFollowGiftRunNums=xx #变量为需要运行账号数量,默认跑前10个账号
-                   export jd_shopFollowGiftRunJF="true" #变量为跑积分关注,默认不跑
-"""
-
 import time ,requests ,sys ,re ,os ,json ,random #line:1
 from datetime import datetime #line:2
 from urllib .parse import quote_plus ,unquote_plus #line:3
