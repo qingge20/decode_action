@@ -1,4 +1,4 @@
-//Wed Oct 09 2024 12:33:07 GMT+0000 (Coordinated Universal Time)
+//Wed Oct 09 2024 12:37:27 GMT+0000 (Coordinated Universal Time)
 //Base:https://github.com/echo094/decode-js
 //Modify:https://github.com/smallfawn/decode_action
 let mode = __dirname.includes("magic"),
