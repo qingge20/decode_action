@@ -1,595 +1,581 @@
-//Wed Oct 09 2024 12:55:36 GMT+0000 (Coordinated Universal Time)
+//Wed Oct 09 2024 12:58:11 GMT+0000 (Coordinated Universal Time)
 //Base:https://github.com/echo094/decode-js
 //Modify:https://github.com/smallfawn/decode_action
-let leaders = [],
-  skipCookieNumber = 0;
-$.version = "v1.1.0";
-console.log("当前版本:" + $.version + ",依赖版本:" + $.superVersion);
+let activityTypes = ["10020", "10021", "10026", "10031", "10042", "10046", "10062", "10063", "10073", "10080"];
+process.env.M_WX_LUCK_ACTIVITY_TYPES ? process.env.M_WX_LUCK_ACTIVITY_TYPES.split(/[@,&|]/).forEach(ll1II1Ii => activityTypes.push(ll1II1Ii)) : "";
+$.limit = 0;
+let maxLimit = "",
+  everyLimit = "",
+  luckLimitRule = "";
+$.version = "v1.6.0";
 $.logic = async function () {
   if (!$.superVersion) throw new Error("请更新脚本");
-  $.signUuid = leaders.filter(_0x503b82 => _0x503b82.finish === false)?.[0]?.["signUuid"] || "";
-  if ($.index > leaderNumber && !$.signUuid) {
-    $.log("已无车头");
+  if (!$.activityId || !$.activityUrl) {
     $.expire = true;
+    $.putMsg("activityId|activityUrl不存在", $.activityUrl, $.activityId);
     return;
   }
-  if (!$.activityId || !$.activityUrl) {
-    $.log("活动id不存在");
-    $.expire = true;
+  if ($.limit === $.notLuckLimit) {
+    this.expire = true;
+    $.putMsg("设置了前" + $.notLuckLimit + "不能抽奖跳出");
     return;
   }
   $.UA = $.ua();
-  let _0x43ad3b = await $.isvObfuscator();
-  if (_0x43ad3b.code !== "0") {
+  let I1Ii1IIi = await $.isvObfuscator();
+  if (I1Ii1IIi.code !== "0") {
     $.putMsg("获取Token失败");
     return;
   }
-  $.Token = _0x43ad3b?.["token"];
-  if (["hdb-isv.isvjcloud.com", "jingyun-rc.isvjcloud.com"].includes($.domain)) {
-    await this.login();
-    let _0x30720a = await this.api("/front/activity/loadPartitionTeamSetting", {
-        "teamId": $.signUuid
-      }),
-      _0xd0101e = _0x30720a.result.partitionTeamSetting;
-    $.prizeList = [{
-      "prizeType": _0xd0101e.awardType.includes("JD_MARKET") || _0xd0101e.awardType.includes("JD_BEAN") ? 1 : 4
-    }];
-    $.maxGroup = _0xd0101e.inviterTimes;
-    $.prizeType = _0xd0101e.awardType.includes("JD_MARKET") || _0xd0101e.awardType.includes("JD_BEAN") ? 1 : 4;
-    $.prizeNumbers = _0xd0101e.helperAwardNum;
-    $.sendNumbers = _0xd0101e.awardTotalNum;
-    $.extraPrizeNumbers = _0xd0101e.inviterAwardNum;
-    if ($.index <= leaderNumber) {
-      if (_0x30720a.result.myTeamLog?.["teamId"]) $.putMsg("已有" + _0x30720a.result.currentTeams.length + "人"), leaders.push({
-        "index": $.index,
-        "cookie": $.cookie,
-        "token": $.Token,
-        "signUuid": _0x30720a.result.myTeamLog.teamId,
-        "username": $.username,
-        "finish": false
-      });else {
-        await $.wait(3000, 5000);
-        await saveCaptain(0);
+  $.Token = I1Ii1IIi?.["token"];
+  if ($.hdbTypes.includes($.domain)) {
+    await $.login();
+    let lIIi1I1I = "",
+      I1iIii1I = 5;
+    if ($.activityUrl.includes("pointDraw")) lIIi1I1I = "postPointDraw";else {
+      lIIi1I1I = "postDraw";
+      let ili1iiIi = await $.api("/front/task/showTaskList", {});
+      for (let iii1i1il of ili1iiIi?.["result"]?.["taskList"]?.["filter"](lIIllii1 => lIIllii1.isFinish === 0) || []) {
+        await $.api("/front/task/completeActivityTask", {
+          "conditionType": iii1i1il.conditionType
+        });
+        await $.wait(5000, 6000);
       }
+      var il11IIII = await $.api("/front/activity/getDrawTimes", {});
+      il11IIII?.["succ"] && (I1iIii1I = il11IIII?.["result"]?.["giveTimes"]);
     }
-    $.signUuid = leaders.filter(_0x258be3 => _0x258be3.finish === false)?.[0]?.["signUuid"] || "";
-    if ($.index === 1 || !$.signUuid) return;
-    let _0x22aad2 = await this.api("/front/activity/joinPartitionTeam", {
-      "teamId": $.signUuid,
-      "tidaType": "joinPartitionTeam"
-    });
-    _0x22aad2.result?.["dmAwards"] || _0x22aad2.message?.["includes"]("战队已满员") ? ($.index = leaders.filter(_0x30e81c => _0x30e81c.finish === false)?.[0]?.["index"], $.username = leaders.filter(_0x44b905 => _0x44b905.finish === false)?.[0]?.["username"], this.putMsg("已经组满"), leaders.filter(_0x10ef41 => _0x10ef41.signUuid === $.signUuid)[0].finish = true) : this.putMsg(_0x22aad2.message || _0x22aad2.result?.["message"] || "未知结果");
-    return;
-  } else {
-    if ($.domain.includes("jinggeng-isv.isvjcloud.com")) {
-      let _0x47748c = await $.api("front/setMixNick", "strTMMixNick=" + $.Token + "&userId=" + $.userId + "&source=01");
-      if (!_0x47748c.succ) {
-        $.putMsg("setMixNick失败");
-        return;
-      }
-      let _0x5b0c49 = await $.api("/ql/front/showPartition?id=" + $.activityId + "&user_id=" + $.userId + "&teamId=null&inviterNick=&envNew=notwx");
-      if (_0x5b0c49.includes("<title>活动已结束</title>")) {
-        $.putMsg("活动已结束");
-        $.expire = true;
-        return;
-      }
-      const _0xd5c2ac = cheerio.load(cheerio.load(_0x5b0c49).html());
-      $.shopId = _0xd5c2ac("#shop_sid", "body").attr("value");
-      $.venderId = _0xd5c2ac("#vender_id", "body").attr("value");
-      $.shopName = _0xd5c2ac("#shop_title", "body").attr("value");
-      $.rule = _0xd5c2ac("#description", "body").html();
-      const _0x3e1971 = /(\d+-\d+-\d+\s\d+:\d+:\d+)/g,
-        _0x4e5703 = $.rule.match(_0x3e1971),
-        _0x367a12 = _0x4e5703[0],
-        _0x1f7659 = _0x4e5703[1];
-      $.actStartTime = new Date(_0x367a12).getTime();
-      $.actEndTime = new Date(_0x1f7659).getTime();
-      $.maxGroup = $.rule.match(/每个玩家可创建(\d+)个战队/)[1] * 1;
-      $.prizeType = $.rule.includes("积分") ? 4 : 1;
-      $.prizeNumbers = $.rule.match(/组队成功后每人可获得(\d+)/)[1] * 1;
-      $.sendNumbers = _0xd5c2ac(".head .count_jd", "body").text().match(/(\d+)/)[0] * 1;
-      $.extraPrizeNumbers = $.rule.match(/组队成功后队长可获得额外(\d+)/)[1] * 1;
-      if ($.actStartTime > Date.now()) {
-        $.putMsg("活动未开始");
-        $.expire = true;
-        return;
-      }
-      if ($.actEndTime < Date.now()) {
-        $.putMsg("活动已结束");
-        $.expire = true;
-        return;
-      }
-      $.index <= leaderNumber && (await $.api("front/followShop", "userId=" + $.userId), await $.wait(3000, 5000), await saveCaptain(), await $.wait(3000, 5000));
-      await saveMember();
-      if ($.index === 2 && leaders.length === 2) {
-        $.log("ck1进ck2队伍");
-        let _0x1012c1 = leaders[0],
-          _0x41c2fb = leaders[1];
-        $.Token = _0x1012c1.token;
-        $.cookie = _0x1012c1.cookie;
-        $.index = _0x1012c1.index;
-        $.username = _0x1012c1.username;
-        $.signUuid = _0x41c2fb.signUuid;
-        await $.wait(3000, 5000);
-        await saveMember();
-      }
+    await $.wait(1000, 2000);
+    if ($.blackLuckDrawRule && new RegExp("(" + $.blackLuckDrawRule + ")").test($.shopName)) {
+      this.expire = true;
+      $.putMsg("垃圾或领完");
       return;
     }
+    if (I1iIii1I === 0) {
+      $.limit++;
+      $.putMsg("无抽奖次数");
+      if ($.limit === $.notLuckLimit) {
+        this.expire = true;
+        $.putMsg("设置了前" + $.notLuckLimit + "不能抽奖跳出");
+        return;
+      }
+    }
+    for (let iIil1l1I = 0; iIil1l1I < I1iIii1I; iIil1l1I++) {
+      let lI11lIi1 = await $.api("/front/activity/" + lIIi1I1I, {
+        "drawTimes": 1
+      });
+      if (lI11lIi1.succ) {
+        let llI1IIiI = lI11lIi1.result;
+        if (llI1IIiI.succ) {
+          $.prizeName = this.getAwardText(llI1IIiI.dmAward);
+          $.putMsg($.prizeName);
+          "JD_GOODS" === llI1IIiI.dmAward.awardType && ($.addressId = llI1IIiI.dmActivityLog.id, await $.saveAddress());
+        } else {
+          $.putMsg(lI11lIi1.message);
+        }
+        break;
+      } else {
+        $.putMsg(lI11lIi1.message.includes("您未中奖") ? "空气" : lI11lIi1.message);
+        if (/(明天继续|空指针|上限|暂无抽奖次数|最大抽奖次数|积分不足|部分会员)/.test(lI11lIi1.message)) {
+          break;
+        }
+        if (/(未开始|结束)/.test(lI11lIi1.message)) {
+          $.putMsg(lI11lIi1.message);
+          $.expire = true;
+          break;
+        }
+      }
+      await $.wait(2000, 4000);
+    }
+    return;
   }
-  if (["10033"].includes($.activityType)) {
-    await $.login();
-    let _0x42ce34 = await $.api("/api/task/organizeTeam/activity", {
-      "shareUserId": $.signUuid || ""
-    });
-    if (_0x42ce34.resp_code !== 0) {
+  if ($.jinggengTypes.includes($.domain)) {
+    await $.wait(1000, 2000);
+    let ii1III1i = await $.api("front/setMixNick", "strTMMixNick=" + $.Token + "&userId=" + $.userId + "&source=01");
+    if (!ii1III1i.succ) {
+      $.putMsg("setMixNick失败");
+      return;
+    }
+    let ll1iilII = "showTaskDraw";
+    if ($.activityUrl.includes("showDrawOne")) ll1iilII = "showDrawOne";else {
+      if ($.activityUrl.includes("loadBlindBox")) {
+        ll1iilII = "loadBlindBox";
+      }
+    }
+    let ilI1i1l = await $.api("ql/front/" + ll1iilII, "id=" + $.activityId + "&user_id=" + $.userId);
+    const Ili1iil = cheerio.load(cheerio.load(ilI1i1l).html());
+    $.shopId = Ili1iil("#shop_sid", "body").attr("value");
+    $.venderId = Ili1iil("#vender_id", "body").attr("value");
+    $.shopName = Ili1iil("#shop_title", "body").attr("value");
+    $.activityType = Ili1iil("#actType", "body").attr("value");
+    if ($.activityUrl.includes("loadBlindBox")) {
+      $.lotteryCount = +Ili1iil("#times").text();
+      if (ilI1i1l.match(/活动已结束/)) {
+        $.putMsg("活动已结束");
+        $.expire = true;
+        return;
+      }
+      const il11iIiI = Ili1iil("#blindTask").attr("value");
+      if (!il11iIiI) {
+        $.putMsg("未知异常，请联系开发者");
+        $.expire = true;
+        return;
+      }
+      const IlIIIlII = JSON.parse(il11iIiI),
+        IIlIlIIl = IlIIIlII.filter(iill11lI => {
+          const i11lilii = iill11lI.isFinish,
+            i1i1l111 = iill11lI.taskType;
+          if (["everyDay", "buy", "cartItem"].includes(i1i1l111) || i11lilii === "1") return false;
+          return true;
+        });
+      if (IIlIlIIl.length > 0) for (let Il11I1i = 0; Il11I1i < IIlIlIIl.length; Il11I1i++) {
+        await $.wait(2000, 4000);
+        const Ii1I1I = IIlIlIIl[Il11I1i],
+          I1I1iIii = Ii1I1I.taskType,
+          I1l1IiII = await $.api("ql/front/postDrawTimes", "userId=" + $.userId + "&actId=" + $.activityId + "&taskType=" + I1I1iIii + "&drawCountNumFlag=true");
+        if (I1l1IiII.succ) {
+          const ii1IlllI = I1l1IiII.giveNum;
+          $.lotteryCount += ii1IlllI;
+        } else $.putMsg(I1l1IiII.msg);
+      }
+      if ($.lotteryCount <= 0) {
+        $.putMsg("无抽奖次数");
+        $.limit++;
+        if ($.limit === $.notLuckLimit) {
+          this.expire = true;
+          $.putMsg("设置了前" + $.notLuckLimit + "不能抽奖跳出");
+          return;
+        }
+        return;
+      }
+      $.prizeList = JSON.parse(Ili1iil("#jdEquityList").attr("value"));
+    } else $.prizeList = JSON.parse(Ili1iil("#awards", "body").text());
+    debugger;
+    const lIiilIll = $.prizeList.filter(IilIlIII => !["JD_COUPON"].includes(IilIlIII.equityType) && IilIlIII.availableQuantity > 0);
+    $.rule = Ili1iil("#description", "body").text();
+    await $.getRuleSETime($.rule);
+    if (lIiilIll.length === 0) {
+      $.putMsg("垃圾或领完");
+      $.expire = true;
+      return;
+    }
+    if ($.actStartTime > Date.now()) {
+      $.putMsg("活动未开始");
+      $.expire = true;
+      return;
+    }
+    if ($.actEndTime < Date.now()) {
       $.putMsg("活动已结束");
       $.expire = true;
       return;
     }
-    for (let _0x22f9fc of $.notTeamList) {
-      if ($.shopName.includes(_0x22f9fc)) {
-        $.expire = true;
-        $.putMsg("已屏蔽");
-        return;
+    if ($.blackLuckDrawRule && new RegExp("(" + $.blackLuckDrawRule + ")").test($.shopName)) {
+      this.expire = true;
+      $.putMsg("垃圾或领完");
+      return;
+    }
+    ll1iilII = "postFrontTaskDraw";
+    if ($.activityUrl.includes("showDrawOne")) {
+      ll1iilII = "postFrontCheckDrawOne";
+    } else $.activityUrl.includes("loadBlindBox") && (ll1iilII = "postBlindBox");
+    let llIIlI1I = 1;
+    $.lotteryCount > 0 && (llIIlI1I = $.lotteryCount);
+    while (llIIlI1I > 0) {
+      try {
+        let ill1llII = await $.api("ql/front/" + ll1iilII, "user_id=" + $.userId + "&act_id=" + $.activityId);
+        if (ill1llII.succ) {
+          let iIil1IlI = JSON.parse(ill1llII.msg);
+          if (iIil1IlI.isSendSucc && iIil1IlI.drawAwardDto) {
+            let lll11i1I = iIil1IlI.drawAwardDto,
+              lli1liIl = $.getAwardText(iIil1IlI.drawAwardDto);
+            $.putMsg(lli1liIl);
+            lll11i1I.awardType === "JD_GOODS" && ($.addressId = iIil1IlI.actLogId, $.prizeName = lli1liIl, await $.saveAddress());
+          } else $.putMsg(ill1llII.msg);
+          llIIlI1I--;
+        } else {
+          const lII1IlIl = ill1llII.msg;
+          await $.wxStop(lII1IlIl);
+          $.putMsg(lII1IlIl);
+          if (llIIlI1I === 1 && lII1IlIl?.["includes"]("积分不足")) {
+            $.limit++;
+            break;
+          }
+          if (lII1IlIl.match(/只有部分会员才可以参加活动|对不起您没有抽奖次数了/)) break;
+          llIIlI1I--;
+        }
+      } catch (i11illI) {
+        const i11lii = i11illI.message;
+        console.log(i11lii);
+        llIIlI1I--;
+        if (llIIlI1I === 0) {
+          break;
+        }
       }
     }
-    $.attrTouXiang = "https://img10.360buyimg.com/imgzone/jfs/t1/21383/2/6633/3879/5c5138d8E0967ccf2/91da57c5e2166005.jpg";
-    $.signUuid = leaders.filter(_0x419709 => _0x419709.finish === false)?.[0]?.["signUuid"] || "";
-    if ($.index > leaderNumber && !$.signUuid) {
-      $.log("已无车头");
-      $.expire = true;
+    if ($.limit === $.notLuckLimit) {
+      this.expire = true;
+      $.putMsg("设置了前" + $.notLuckLimit + "不能抽奖跳出");
       return;
     }
-    $.prizeNumbers = _0x42ce34.data.memberPrize;
-    $.sendNumbers = _0x42ce34.data.prizeList[0].totalPrizeNum || 0;
-    $.extraPrizeNumbers = _0x42ce34.data.captainPrize;
-    $.prizeType = _0x42ce34.data.prizeType;
-    $.maxGroup = _0x42ce34.data.groupNumber;
-    if ($.index > leaderNumber && _0x42ce34.resp_code == 1000) {
-      $.log("已加入别人了");
-      return;
-    }
-    if (_0x42ce34.data.joinFlag == 4 && $.index > leaderNumber) {
-      console.log("已加入别人了");
-      return;
-    }
-    if ($.prizeType === 4 && onlyBean === 1) {
-      $.putMsg("仅跑豆子组队");
-      $.expire = true;
-      return;
-    }
-    if ($.index <= leaderNumber) {
-      let _0x36dad3 = 0;
-      for (let _0x5c5c03 of _0x42ce34.data.captainList || []) {
-        _0x36dad3 += _0x5c5c03.memberCount;
-      }
-      await $.api("/api/task/bargain/guest/myself", {
-        "shareUserId": $.signUuid || ""
-      });
-      let _0x12cd9a = await $.api("/api/task/share/getUserId", {
-        "shareUserId": $.signUuid || ""
-      });
-      if ($.maxGroup * 5 === _0x36dad3) {
-        leaders.push({
-          "index": $.index,
-          "cookie": $.cookie,
-          "token": $.Token,
-          "username": $.username,
-          "finish": true
-        });
-        $.putMsg("已经组满");
-        return;
-      }
-      if (_0x42ce34.data?.["captainList"]?.["length"] > 0 && _0x36dad3 % 5 != 0) leaders.push({
-        "index": $.index,
-        "cookie": $.cookie,
-        "token": $.Token,
-        "signUuid": _0x12cd9a.data.shareUserId,
-        "teamId": _0x42ce34.data.captainList.filter(_0x3870b6 => _0x3870b6.memberCount !== 5)[0].id,
-        "username": $.username,
-        "finish": false
-      }), $.putMsg("已有" + _0x36dad3 + "人");else {
-        await $.api("/api/task/organizeTeam/saveCaptain", {});
-        let _0x20a237 = await $.api("/api/task/organizeTeam/activity", {
-          "shareUserId": $.signUuid || ""
-        });
-        leaders.push({
-          "index": $.index,
-          "cookie": $.cookie,
-          "token": $.Token,
-          "signUuid": _0x12cd9a.data.shareUserId,
-          "teamId": _0x20a237.data.captainList.filter(_0x1b21f6 => _0x1b21f6.memberCount !== 5)[0].id,
-          "username": $.username,
-          "finish": false
-        });
-        $.putMsg("建队");
-      }
-    }
-    if ($.expire) {
-      return;
-    }
-    if ($.index === 1) return;
-    if (_0x42ce34.resp_code == 1000) {
-      $.log("已加入队伍");
-      return;
-    }
-    $.signUuid = leaders.filter(_0x443213 => _0x443213.finish === false)?.[0]?.["signUuid"] || "";
-    $.teamId = leaders.filter(_0x1d68e2 => _0x1d68e2.finish === false)?.[0]?.["teamId"] || "";
-    await saveMember();
-    if ($.index === 2 && leaders.length === 2) {
-      $.log("ck1进ck2队伍");
-      let _0x272992 = leaders[0],
-        _0x5935eb = leaders[1];
-      $.Token = _0x272992.token;
-      $.cookie = _0x272992.cookie;
-      $.index = _0x272992.index;
-      $.username = _0x272992.username;
-      $.signUuid = _0x5935eb.signUuid;
-      $.teamId = _0x5935eb.teamId;
-      await saveMember();
-    }
-    return;
-  }
-  await $.getSimpleActInfoVo();
-  if ($.expire) return;
-  await $.getMyPing();
-  if (!$.Pin) return;
-  await $.accessLog();
-  $.attrTouXiang = "https://img10.360buyimg.com/imgzone/jfs/t1/21383/2/6633/3879/5c5138d8E0967ccf2/91da57c5e2166005.jpg";
-  $.signUuid = leaders.filter(_0x59cd5b => _0x59cd5b.finish === false)?.[0]?.["signUuid"] || "";
-  if ($.index > leaderNumber && !$.signUuid) {
-    $.log("已无车头");
-    $.expire = true;
-    return;
-  }
-  activityContent = await $.api("wxTeam/activityContent", "activityId=" + $.activityId + "&pin=" + $.Pin + "&signUuid=" + ($.signUuid || ""));
-  if (!activityContent.result || !activityContent.data) {
-    $.putMsg(activityContent.errorMessage);
-    await $.wxStop(activityContent.errorMessage);
-    return;
-  }
-  $.actStartTime = activityContent.data.active.startTime;
-  $.actEndTime = activityContent.data.active.endTime;
-  $.prizeNumbers = activityContent.data.active.prizeNumbers;
-  $.sendNumbers = activityContent.data.active.sendNumbers;
-  $.extraPrizeNumbers = activityContent.data.active.extraPrizeNumbers;
-  $.prizeType = activityContent.data.active.prizeType;
-  $.maxGroup = activityContent.data.active.maxGroup;
-  $.shopName = await $.getShopName();
-  if ($.prizeType * 1 === 9) {
-    for (let _0x371dda of $.notTeamList) {
-      if ($.shopName.includes(_0x371dda)) {
-        $.expire = true;
-        $.putMsg("垃圾活动");
-        return;
-      }
-    }
-    if ($.shopName.includes("海尔") || $.shopName.includes("沃隆")) {
-      $.expire = true;
-      return;
-    }
-  }
-  let _0x188c08 = $.actStartTime.startTime - $.timestamp();
-  _0x188c08 > 0 && _0x188c08 < 1000 * 60 * 30 ? await $.wait(_0x188c08 + 10) : "";
-  if ($.actEndTime <= $.timestamp()) {
-    $.putMsg("活动已结束");
-    $.expire = true;
-    return;
-  }
-  let _0x30fdaa = activityContent.data.canJoin;
-  if ($.index > leaderNumber && !_0x30fdaa) {
-    $.log("已加入别人了");
-    return;
-  }
-  if ($.prizeType === 9 && onlyBean === 1) {
-    $.putMsg("仅跑豆子组队");
-    $.expire = true;
-    return;
-  }
-  if ($.prizeType === 6 && ($.prizeNumbers + $.extraPrizeNumbers) * $.maxGroup + $.prizeNumbers < beanLimit) {
-    $.putMsg("豆子小于" + beanLimit + ",智能判断");
-    $.expire = true;
-    return;
-  }
-  if ($.index <= leaderNumber) {
-    let _0x44820e = activityContent.data.signUuid,
-      _0x185660 = 0;
-    for (let _0x5a7b09 of activityContent.data.successRetList || []) {
-      _0x185660 += _0x5a7b09.memberList.length;
-    }
-    if ($.maxGroup * 5 === _0x185660) {
-      leaders.push({
-        "index": $.index,
-        "cookie": $.cookie,
-        "token": $.Token,
-        "pin": $.Pin,
-        "signUuid": _0x44820e,
-        "username": $.username,
-        "finish": true
-      });
-      $.putMsg("已经组满");
-      skipCookieNumber += $.maxGroup * 4;
-      return;
-    }
-    let _0x4b9d04 = activityContent.data.list?.["length"];
-    _0x4b9d04 > 0 ? (leaders.push({
-      "index": $.index,
-      "cookie": $.cookie,
-      "token": $.Token,
-      "pin": $.Pin,
-      "signUuid": _0x44820e,
-      "username": $.username,
-      "finish": false
-    }), $.putMsg("已有" + _0x4b9d04 + "人")) : await saveCaptain(0);
-  }
-  if ($.expire) {
-    return;
-  }
-  if ($.index === 1 && $.domain.includes("cjhy")) {
-    return;
-  }
-  if (!_0x30fdaa) {
-    $.log("已加入队伍");
-    return;
-  }
-  $.signUuid = leaders.filter(_0x3d5a2c => _0x3d5a2c.finish === false)?.[0]?.["signUuid"] || "";
-  await saveMember();
-  if ($.index === 2 && leaders.length === 2) {
-    $.log("ck1进ck2队伍");
-    let _0x2867ce = leaders[0],
-      _0x317bad = leaders[1];
-    $.Pin = _0x2867ce.pin;
-    $.index = _0x2867ce.index;
-    $.Token = _0x2867ce.token;
-    $.cookie = _0x2867ce.cookie;
-    $.username = _0x2867ce.username;
-    $.signUuid = _0x317bad.signUuid;
-    await $.api("customer/getMyPing", "userId=" + $.venderId + "&token=" + $.Token + "&fromType=APP");
-    await saveMember();
-  }
-};
-let typeObj = {
-  "1": "京豆",
-  "2": "流量包",
-  "4": "积分",
-  "6": "京豆",
-  "7": "实物",
-  "8": "专享价",
-  "9": "积分",
-  "13": "京东E卡",
-  "14": "爱奇艺会员",
-  "15": "PLUS会员"
-};
-$.getPrizeList = async function () {
-  try {
-    let _0x519c9e = await $.api("/api/task/organizeTeam/activity", {
-      "shareUserId": $.signUuid || ""
-    });
-    $.prizeType = _0x519c9e.data.prizeType;
-    $.prizeNumbers = _0x519c9e.data.memberPrize;
-    $.sendNumbers = _0x519c9e.data.prizeList[0].totalPrizeNum || 0;
-    $.extraPrizeNumbers = _0x519c9e.data.captainPrize;
-    $.prizeType = _0x519c9e.data.prizeType;
-    $.maxGroup = _0x519c9e.data.groupNumber;
-    $.prizeList = [{
-      "prizeType": $.prizeType,
-      "prizeName": typeObj[$.prizeType]
-    }];
-  } catch (_0x83d754) {
-    console.log(_0x83d754);
-  }
-};
-async function saveCaptain(_0x2a5d20 = 0) {
-  if (["hdb-isv.isvjcloud.com", "jingyun-rc.isvjcloud.com"].includes($.domain)) {
-    let _0x52ed4c = await $.api("/front/activity/startPartitionTeam", {
-      "tidaType": "share"
-    });
-    if (_0x52ed4c.message?.["includes"]("组队上限")) {
-      $.putMsg("已经组满");
-      return;
-    }
-    $.putMsg("建队");
-    leaders.push({
-      "index": $.index,
-      "cookie": $.cookie,
-      "token": $.Token,
-      "signUuid": _0x52ed4c.result.teamId,
-      "username": $.username,
-      "finish": false
-    });
   } else {
-    if ($.domain.includes("jinggeng-isv.isvjcloud.com")) {
-      let _0x2289e6 = await $.api("ql/front/postPartition", "user_id=" + $.userId + "&act_id=" + $.activityId);
-      _0x2289e6.msg ? $.log(_0x2289e6.msg) : "";
-      if (_0x2289e6.msg?.["includes"]("关注店铺") && _0x2a5d20 < 3) {
-        let _0x50ee06 = await $.api("front/followShop", "userId=" + $.userId);
-        if (!_0x50ee06.success) {
-          $.putMsg(_0x50ee06.msg);
+    if (activityTypes.includes($.activityType)) {
+      await $.login();
+      if ($.blackLuckDrawRule && new RegExp("(" + $.blackLuckDrawRule + ")").test($.shopName)) {
+        this.expire = true;
+        $.putMsg("垃圾或领完");
+        return;
+      }
+      let iil1llll = await $.api("/api/task/jiugongge/activity", {});
+      if (iil1llll.resp_code !== 0) {
+        $.putMsg("获取活动失败");
+        $.putMsg(iil1llll.resp_code + " " + iil1llll.resp_msg);
+        return;
+      }
+      $.skuList = [];
+      await $.taskToDo(iil1llll);
+      if (["10026", "10080"].includes($.activityType)) {
+        $.canDrawTimes = 2;
+        let iilIiiii = await $.api("/api/task/points/consumePoints", {});
+        $.consumePoints = iilIiiii.data.integral;
+      } else {
+        let I1ilI1lI = await $.api("/api/prize/drawPrize", {});
+        $.canDrawTimes = I1ilI1lI.data?.["drawNumber"] || 0;
+        $.canDrawTimes === 0 && ($.limit++, $.putMsg("无抽奖次数"));
+        if ($.limit === $.notLuckLimit) {
+          this.expire = true;
+          $.putMsg("设置了前" + $.notLuckLimit + "不能抽奖跳出");
           return;
         }
-        await $.wait(3000, 5000);
-        _0x2289e6 = await $.api("ql/front/postPartition", "user_id=" + $.userId + "&act_id=" + $.activityId);
       }
-      if (_0x2289e6.msg?.["includes"]("活动已经结束")) {
-        console.log(_0x2289e6);
-      }
-      let _0x1058fb = _0x2289e6.data.partitionTeamLogParams[0];
-      _0x1058fb.jdCombatTeamLogs.length === 5 ? _0x2289e6.msg?.["includes"]("发起战队的机会用完了呢") && $.putMsg("已经组满") : leaders.push({
-        "index": $.index,
-        "cookie": $.cookie,
-        "token": $.Token,
-        "signUuid": _0x1058fb.jdCombatTeamSetting.id,
-        "username": $.username,
-        "finish": _0x1058fb.jdCombatTeamLogs.length === 5
-      });
-    } else {
-      let _0x43e94f = await $.api("wxTeam/saveCaptain", "activityId=" + $.activityId + "&pin=" + $.Pin + "&venderId=" + $.venderId + "&pinImg=" + encodeURIComponent($.attrTouXiang));
-      if (_0x43e94f.result && _0x43e94f.data) $.putMsg("建队"), leaders.push({
-        "index": $.index,
-        "cookie": $.cookie,
-        "token": $.Token,
-        "pin": $.Pin,
-        "signUuid": _0x43e94f.data.signUuid,
-        "username": $.username,
-        "finish": false
-      });else {
-        if (_0x43e94f.errorMessage.includes("店铺会员") && _0x2a5d20 < 3) await $.openCard(), await saveCaptain(_0x2a5d20++);else {
-          if (_0x43e94f.errorMessage.includes("奖品与您擦肩而过") && _0x2a5d20 === 0) await saveCaptain(1);else {
-            if (_0x43e94f.errorMessage.includes("还没满员")) {
-              $.putMsg("建队");
-              let _0x1ffa31 = await $.api("wxTeam/activityContent", "activityId=" + $.activityId + "&pin=" + $.Pin + "&signUuid=" + ($.signUuid || ""));
-              leaders.push({
-                "index": $.index,
-                "cookie": $.cookie,
-                "token": $.Token,
-                "pin": $.Pin,
-                "signUuid": _0x1ffa31.data.signUuid,
-                "username": $.username,
-                "finish": false
-              });
-            } else _0x43e94f.errorMessage.includes("未开始") ? ($.putMsg("未开始"), $.expire = true) : $.log("saveCaptain异常：" + JSON.stringify(_0x43e94f));
-          }
-        }
-      }
-    }
-  }
-}
-async function saveMember(_0x1a870f = 0) {
-  if (_0x1a870f > 5) {
-    console.log("递归异常退出");
-    return;
-  }
-  let _0xb7212f = $.index,
-    _0x48b04d = $.username;
-  if (["10033"].includes($.activityType)) {
-    if (!$.teamId || !$.signUuid) {
-      console.log("无车头退出");
-      return;
-    }
-    let _0x4db43e = await $.api("/api/task/organizeTeam/saveMember", {
-      "teamId": $.teamId,
-      "shareUserId": $.signUuid
-    });
-    $.log(_0x4db43e.data ? "入队成功" : _0x4db43e.resp_msg);
-    if (_0x4db43e.data?.["memberList"]?.["length"] === 5) {
-      let _0x5f9454 = leaders.filter(_0x2e3b1c => _0x2e3b1c.signUuid === $.signUuid)[0];
-      $.putMsg("已经组满");
-      $.Token = _0x5f9454.token;
-      let _0x15289a = await $.api("/api/task/organizeTeam/saveCaptain", {});
-      if (_0x15289a.resp_code === 0) {
-        let _0x44a2ce = await $.api("/api/task/organizeTeam/activity", {
-          "shareUserId": $.signUuid || ""
+      for (let iiIi1IiI = 1; $.canDrawTimes--; iiIi1IiI++) {
+        let Iil1i1l1 = await $.api("/api/prize/draw", {
+          "consumePoints": $.consumePoints || 0
         });
-        $.putMsg("建队");
-        _0x5f9454.teamId = _0x44a2ce.data.captainList.filter(_0x4405da => _0x4405da.memberCount !== 5)[0].id;
-      } else _0x5f9454.finish = true, $.log(_0x15289a.resp_msg);
-      return;
-    }
-    if (_0x4db43e.resp_msg.includes("您已加入其他队伍！")) return;
-    if (_0x4db43e.resp_msg.includes("您的好友组队数已达上限！")) {
-      let _0x3dbbd0 = leaders.filter(_0x49e604 => _0x49e604.signUuid === $.signUuid)[0];
-      _0x3dbbd0.finish = true;
-      $.index = _0x3dbbd0.index;
-      $.username = _0x3dbbd0.username;
-      $.putMsg("已经组满");
-      $.username = _0x48b04d;
-      $.index = _0xb7212f;
-      _0x3dbbd0 = leaders.filter(_0x479b0b => _0x479b0b.finish === false)?.[0];
-      if (!_0x3dbbd0) {
-        $.putMsg("已无车头");
-        $.expire = true;
-        return;
+        if (Iil1i1l1.data == "1") {
+          $.putMsg("积分不足");
+          $.limit++;
+          if ($.limit === $.notLuckLimit) {
+            this.expire = true;
+            $.putMsg("垃圾或领完");
+            $.putMsg("设置了前" + $.notLuckLimit + "不能抽奖跳出");
+            return;
+          }
+          break;
+        }
+        if (Iil1i1l1.resp_code == "0") {
+          Iil1i1l1.data.dayTime == $.now("yyyy-MM-dd") ? ($.putMsg(Iil1i1l1.data.prizeName), Iil1i1l1.data.prizeType == 3 && ($.addressId = Iil1i1l1.data.addressId, $.prizeName = Iil1i1l1.data.prizeName, await $.saveAddress()), Iil1i1l1.data.prizeType == 7 && $.putMsg(JSON.parse(Iil1i1l1.data?.["prizeJson"] || {})?.["cardNumber"] || "")) : $.putMsg("空气");
+        } else {
+          $.putMsg(Iil1i1l1.resp_msg);
+        }
+        $.limit = 0;
       }
-      $.teamId = _0x3dbbd0?.["teamId"] || "";
-      $.signUuid = _0x3dbbd0?.["signUuid"] || "";
-      await saveMember(_0x1a870f++);
-    }
-  } else {
-    if ($.domain.includes("jinggeng-isv.isvjcloud.com")) {
-      if ($.signUuid) {
-        let _0x48ce81 = await $.api("ql/front/postPartition", "user_id=" + $.userId + "&act_id=" + $.activityId + "&teamId=" + $.signUuid);
-        _0x48ce81.msg ? $.log(_0x48ce81.msg) : "";
-        if (_0x48ce81.msg?.["includes"]("活动已经结束")) {
+    } else {
+      if ($.domain.includes("gzsl-isv.isvjcloud.com")) {
+        let iIllI1 = await $.api("wuxian/user/getLottery/" + $.activityId, {
+          "id": $.activityId,
+          "token": $.Token,
+          "source": "01"
+        });
+        if (iIllI1.status !== "1") {
+          $.putMsg("活动已结束");
+          $.expire = true;
+          await $.wxStop(iIllI1.msg);
+          return;
+        }
+        $.shopName = iIllI1.activity.shopName;
+        $.venderId = iIllI1.activity.venderId || iIllI1.activity.shopId;
+        $.shopId = iIllI1.activity.shopId;
+        $.activityType = iIllI1.activity.activityType;
+        $.prizeList = iIllI1.activity.prizes;
+        $.actStartTime = iIllI1.activity.startTime;
+        $.actEndTime = iIllI1.activity.endTime;
+        if ($.blackLuckDrawRule && new RegExp("(" + $.blackLuckDrawRule + ")").test($.shopName)) {
+          this.expire = true;
+          $.putMsg("垃圾或领完");
+          return;
+        }
+        if ($.actStartTime > $.timestamp()) {
+          $.putMsg("活动未开始");
           $.expire = true;
           return;
         }
-        if (_0x48ce81.msg?.["includes"]("火爆") || _0x48ce81.msg?.["includes"]("已用完")) {
+        if ($.actEndTime < $.timestamp()) {
+          $.putMsg("活动已结束");
+          $.expire = true;
           return;
         }
-        if (_0x48ce81.msg?.["includes"]("关注") && _0x1a870f < 3) {
-          await $.api("front/followShop", "userId=" + $.userId);
+        let Il1ill1 = $.prizeList.filter(lII1Iill => ["1", "3", "4"].includes(lII1Iill.source));
+        if (Il1ill1.length === 0) {
+          $.putMsg("垃圾或领完");
+          $.expire = true;
+          return;
+        }
+        $.canDrawTimes = iIllI1.leftTime || 0;
+        $.canDrawTimes === 0 ? $.limit++ : $.limit = 0;
+        if ($.canDrawTimes === 0) {
+          $.putMsg("抽奖次数0");
+          return;
+        }
+        await $.wait(1000, 3000);
+        for (let l1li1l = 1; $.canDrawTimes--; l1li1l++) {
           await $.wait(3000, 5000);
-          await saveMember(_0x1a870f++);
+          let liii1ii1 = await $.api("wuxian/user/draw/" + $.activityId, {
+            "id": $.activityId,
+            "token": $.Token,
+            "source": "01"
+          });
+          if (liii1ii1.status !== "1") {
+            if (["-2", "-8"].includes(liii1ii1.status)) {
+              this.putMsg(liii1ii1.msg);
+              break;
+            }
+            if (liii1ii1.status === "-14") {
+              $.putMsg("开卡入会后参与活动");
+              await $.complete();
+              break;
+            }
+            if (l1li1l === 1 && liii1ii1.status === "-3") {
+              $.log("去关注");
+              await $.api("wuxian/user/flowShop/" + $.shopId + "/" + $.shopId, {
+                "shopId": $.shopId,
+                "source": "01",
+                "token": $.Token,
+                "venderId": $.shopId
+              });
+              $.canDrawTimes++;
+              continue;
+            }
+            if (/明天继续/.test(liii1ii1.msg)) {
+              break;
+            }
+            $.putMsg(liii1ii1.msg);
+            continue;
+          }
+          liii1ii1?.["winId"] ? (liii1ii1.data.source === "0" && $.canDrawTimes++, $.putMsg(liii1ii1.data.detail)) : $.putMsg("空气");
+        }
+      } else {
+        await $.getSimpleActInfoVo();
+        if ($.expire) {
           return;
         }
-        if (_0x48ce81.msg?.["includes"]("已满员")) {
-          let _0x3cd682 = leaders.filter(_0x5c99d6 => _0x5c99d6.signUuid === $.signUuid)[0];
-          _0x3cd682.finish = true;
-          $.Token = _0x3cd682.token;
-          $.index = _0x3cd682.index;
-          $.username = _0x3cd682.username;
-          $.cookie = _0x3cd682.cookie;
-          await saveCaptain(0);
-          $.signUuid = leaders.filter(_0x4ed6d0 => _0x4ed6d0.finish === false)?.[0]?.["signUuid"] || "";
-          if ($.index > leaderNumber && !$.signUuid) {
-            $.log("已无车头");
+        await $.getMyPing();
+        if (!$.Pin) {
+          return;
+        }
+        $.shopName = await $.getShopName();
+        await $.accessLog();
+        let I1iiiIil = "wxDrawActivity";
+        if ($.activityType === 26) {
+          I1iiiIil = "wxPointDrawActivity";
+        }
+        $.activityType === 124 && (I1iiiIil = "wxScratchActive");
+        $.activityType === 128 && (I1iiiIil = "wxGashaponActive");
+        if ($.activityType === 125) {
+          I1iiiIil = "wxPointBlindBox";
+        }
+        $.activityType === 129 && (I1iiiIil = "wxDollGrabbing");
+        let iii1lIli = await $.api(I1iiiIil + "/activityContent", "activityId=" + $.activityId + "&pin=" + $.Pin);
+        if (!iii1lIli.result || !iii1lIli.data) {
+          $.putMsg(iii1lIli?.["errorMessage"]);
+          return;
+        }
+        $.hasFollow = iii1lIli.data.hasFollow;
+        $.needFollow = iii1lIli.data.needFollow;
+        $.prizeList = iii1lIli.data.content;
+        $.rule = iii1lIli.data.rule;
+        let I1i111l = $.rule.split("\n");
+        if (!luckLimitRule) {
+          let IIiii111 = 0;
+          for (let I11i11i of I1i111l) {
+            if (I11i11i.includes("抽奖机会") || I11i11i.includes("每人每天")) {
+              IIiii111 = 1;
+            }
+            IIiii111 > 0 && IIiii111 < 3 && (luckLimitRule += I11i11i + "\n", IIiii111++);
+          }
+          maxLimit = $.match(/累计抽奖(不超过)?(\d+)次/, $.rule)?.[1];
+          everyLimit = $.match(/每天最多抽奖(\d+)次/, $.rule);
+        }
+        $.actName = iii1lIli.data.drawConsume ? "积分抽奖" : "幸运抽奖";
+        $.drawConsume = iii1lIli.data.drawConsume || 0;
+        $.actStartTime = iii1lIli.data?.["startTime"];
+        $.actEndTime = iii1lIli.data?.["endTime"];
+        await $.getRuleSETime($.rule);
+        if ($.prizeList.filter(lIilli1l => [6, 7, 13, 14, 15, 16].includes(lIilli1l.type)).length === 0) {
+          $.putMsg("垃圾或领完");
+          this.expire = true;
+          return;
+        }
+        if ($.actStartTime && $.actStartTime > $.timestamp()) {
+          this.expire = true;
+          $.putMsg("活动未开始");
+          return;
+        }
+        if ($.actEndTime && $.actEndTime < $.timestamp()) {
+          this.expire = true;
+          $.putMsg("活动已结束");
+          return;
+        }
+        if ([26, 124, 125, 128, 129].includes($.activityType)) {
+          if ($.notLuckDrawList && new RegExp("(" + $.notLuckDrawList + ")").test($.shopName) && $.formatDate($.actStartTime, "yyyy-MM-dd") !== $.formatDate(Date.now(), "yyyy-MM-dd") && !process?.["argv"][1]?.["includes"]("hand")) {
             $.expire = true;
+            $.putMsg("已屏蔽");
+            return;
           }
         }
-      }
-    } else {
-      let _0x574648 = await $.api("wxTeam/saveMember", "activityId=" + $.activityId + "&signUuid=" + $.signUuid + "&pin=" + $.Pin + "&venderId=" + $.venderId + "&pinImg=" + encodeURIComponent($.attrTouXiang)),
-        _0x908fba = leaders.filter(_0x385bdc => _0x385bdc.signUuid === $.signUuid)[0];
-      if (_0x574648.result && _0x574648.data) {
-        if ($.index > leaderNumber) {
+        if ($.blackLuckDrawRule && new RegExp("(" + $.blackLuckDrawRule + ")").test($.shopName)) {
+          this.expire = true;
+          $.putMsg("垃圾或领完");
           return;
         }
-        $.putMsg("入" + _0x908fba.username + "队伍");
-      } else {
-        if (_0x574648.errorMessage.includes("店铺会员") && _0x1a870f < 3) await $.openCard(), await saveMember(_0x1a870f++);else {
-          if (_0x574648.errorMessage.includes("队伍已经满员")) {
-            $.log(_0x908fba);
-            $.index = _0x908fba.index;
-            $.username = _0x908fba.username;
-            $.putMsg("已经组满");
-            $.username = _0x48b04d;
-            $.index = _0xb7212f;
-            leaders.filter(_0x2f45cc => _0x2f45cc.signUuid === $.signUuid)[0].finish = true;
-            $.signUuid = leaders.filter(_0x406ca1 => _0x406ca1.finish === false)?.[0]?.["signUuid"] || "";
-            if (!$.signUuid) {
-              $.log("已无车头");
-              $.expire = true;
+        if (![26, 124, 125, 128, 129].includes($.activityType)) {
+          let i1IIlli = await $.api("wxDrawActivity/getGiveContent", "activityId=" + $.activityId + "&pin=" + $.Pin);
+          $.follow = i1IIlli.data.follow;
+          $.share = i1IIlli.data.share;
+          if (i1IIlli?.["result"]) {
+            try {
+              if ($.follow && i1IIlli.data.follow.hasFollowTimes < i1IIlli.data.follow.followTimes) {
+                $.log("做关注任务");
+                let iIl11llI = i1IIlli.data.follow.followTimes - i1IIlli.data.follow.hasFollowTimes;
+                for (let l111lili = 0; l111lili < iIl11llI; l111lili++) {
+                  let IIiI1I1i = i1IIlli.data.follow.skuIdsList[l111lili],
+                    iI1liIii = await $.api("wxDrawActivity/follow", "activityId=" + $.activityId + "&pin=" + $.Pin + "&skuId=" + IIiI1I1i);
+                  if (!iI1liIii.result) {
+                    break;
+                  }
+                }
+              }
+              if ($.share && i1IIlli.data.share.hasShareTimes < i1IIlli.data.share.shareTimes) {
+                $.log("做分享任务");
+                let i111iI1l = i1IIlli.data.share.shareTimes - i1IIlli.data.share.hasShareTimes;
+                for (let il1iI1Ii = 0; il1iI1Ii < i111iI1l; il1iI1Ii++) {
+                  let IIllI1ll = await $.api("wxDrawActivity/shareSuccess", "activityId=" + $.activityId + "&pin=" + $.Pin);
+                  if (IIllI1ll?.["result"]) break;
+                }
+              }
+              if ($.follow || $.share) {
+                iii1lIli = await $.api(I1iiiIil + "/activityContent", "activityId=" + $.activityId + "&pin=" + $.Pin);
+              }
+            } catch (II1ilIli) {
+              $.log(II1ilIli);
+            }
+          } else $.putMsg("获取任务列表失败");
+        }
+        $.canDrawTimes = iii1lIli.data.canDrawTimes || 0;
+        $.canDrawTimes === 0 && ($.limit++, $.putMsg("无抽奖次数"));
+        if ($.limit === $.notLuckLimit) {
+          this.expire = true;
+          $.putMsg("设置了前" + $.notLuckLimit + "不能抽奖跳出");
+          return;
+        }
+        if ([26, 124, 125, 128, 129].includes($.activityType)) {
+          let lIIi1II1 = await this.api("common/joinConfig/check", "venderId=" + $.venderId + "&pin=" + $.Pin + "&activityType=" + this.activityType + "&activityId=" + this.activityId);
+          if (lIIi1II1?.["data"]?.["openCard"] === 0) {
+            $.putMsg("需要开卡跳过");
+            $.needOpenCard = true;
+            return;
+          }
+          if (lIIi1II1?.["data"]?.["follow"] === 0) {}
+        }
+        $.canDrawTimes = Math.min($.canDrawTimes, 5);
+        for (let liIll = 1; $.canDrawTimes--; liIll++) {
+          $.limit = 0;
+          let iiilIli = await $.api(I1iiiIil + "/start", "activityId=" + $.activityId + "&pin=" + $.Pin);
+          if (iiilIli.result) {
+            $.canDrawTimes = iiilIli.data.canDrawTimes;
+            if (iiilIli.data.drawOk) {
+              $.putMsg(iiilIli.data.name);
+              iiilIli.data.drawInfoType === 7 && iiilIli.data.needWriteAddress === "y" && iiilIli.data.addressId && ($.addressId = iiilIli.data.addressId, $.prizeName = iiilIli.data.name, await $.saveAddress());
+            } else $.putMsg("空气");
+          } else {
+            if (iiilIli.errorMessage.includes("当前不在活动可兑换时间内") || iiilIli.errorMessage.includes("活动未开始,或已结束")) {
+              if ($.timestamp() > $.parseDate($.match(/至 (\d+-\d+-\d+ \d+:\d+)/, $.rule) + ":00")) {
+                $.putMsg("活动已结束");
+                this.expire = true;
+                return;
+              }
+              if ($.parseDate($.match(/(\d+-\d+-\d+ \d+:\d+) 至/, $.strTime) + ":00") > $.timestamp()) {
+                $.putMsg("未开始");
+                this.expire = true;
+                return;
+              }
+              $.putMsg("" + iiilIli.errorMessage);
+              this.expire = true;
               return;
             }
-            await saveMember(0);
-          } else {
-            if (_0x574648.errorMessage.includes("奖品与您擦肩而过") && _0x1a870f === 0) await saveMember(1);else {
-              if (_0x574648.errorMessage.includes("已经加入")) {
-                $.putMsg(_0x574648.errorMessage);
-              } else $.putMsg(_0x574648.errorMessage || "saveMember异常"), await $.wxStop(_0x574648.errorMessage), $.log("saveMember异常：" + JSON.stringify(_0x574648));
+            $.putMsg("" + iiilIli.errorMessage);
+            await $.wxStop(iiilIli.errorMessage);
+            break;
+          }
+          if (!$.shopName.includes("蓝月亮")) {
+            if (Number($.canDrawTimes) <= 0 || liIll >= 5) {
+              break;
             }
           }
         }
       }
     }
   }
-}
+};
 $.after = async function () {
   try {
-    if ($.prizeType) {
-      let _0x5c7abc = typeObj[$.prizeType];
-      $.msg.push("    最多可组" + $.maxGroup + "队,共" + $.sendNumbers + _0x5c7abc + " " + $.index);
-      let _0x16a394 = ($.prizeNumbers + $.extraPrizeNumbers) * $.maxGroup,
-        _0x1ece7e = _0x16a394 + $.prizeNumbers;
-      $.msg.push("    组满" + _0x1ece7e + _0x5c7abc + ",队长" + _0x16a394 + _0x5c7abc + ",队员" + $.prizeNumbers + _0x5c7abc);
+    if (maxLimit) {
+      $.msg.push("    抽奖次数:每天最多" + everyLimit + "次,累计最大" + maxLimit + "次");
+      $.msg.push("" + luckLimitRule);
+      try {
+        if ($.actStartTime && $.timestamp() > addDays(typeof $.actStartTime === "string" ? $.parseDate($.actStartTime).getTime() : $.actStartTime, Math.floor(maxLimit / everyLimit)).getTime()) {
+          $.msg.push("    已超过最大抽奖次数");
+        }
+      } catch (lliI11il) {}
     }
-  } catch (_0x5bb21b) {
-    console.log(_0x5bb21b);
+    $.rule.includes("初次赠送抽奖机会 0 次") && $.msg.push("    已超过最大抽奖次数,初次赠送抽奖机会用完");
+    if ($.rule.includes("初次赠送抽奖机会 1 次") && $.timestamp() > $.parseDate($.actStartTime).getTime()) {
+      $.msg.push("    已超过最大抽奖次数,初次赠送抽奖机会用完");
+    }
+    try {
+      if ($.actStartTime) {
+        const iIlIl1il = $.checkDrawTimes($.rule, $.actStartTime, /每人每天最多抽奖(\d+)次，活动期间每人累计抽奖(不超过)?(\d+)次/);
+        !iIlIl1il && $.msg.push("智能判断，已超过最大抽奖次数");
+      }
+    } catch (lil1lil1) {
+      console.log(lil1lil1);
+    }
+    if ($.jinggengTypes.includes($.domain)) {} else [26, 124, 125, 128, 129].includes($.activityType) && $.msg.push("    花费" + $.drawConsume + "积分/次");
+    if ($.hdbTypes.includes($.domain)) for (let iIliiI of $.prizeList || []) {
+      $.msg.push("    " + $.getAwardText(iIliiI));
+    }
+    for (let lilIlIl1 of $.prizeList || []) {
+      if ($.domain.includes("loreal") || $.domain.includes("lzbk") || $.domain.includes("lzkj") || $.domain.includes("cjhy")) {
+        if (activityTypes.includes($.activityType)) $.msg.push("    " + lilIlIl1.prizeName + " 剩" + lilIlIl1.leftNum + "份");else {
+          if (lilIlIl1.name.includes("谢谢") || lilIlIl1.name.includes("再来")) {
+            continue;
+          }
+          $.msg.push("    " + lilIlIl1.name + "    " + lilIlIl1.priceInfo + "元  " + (lilIlIl1?.["type"] === 8 ? "专享价" : ""));
+        }
+      } else {
+        if ($.domain.includes("jinggeng")) {
+          if (lilIlIl1.equityName.includes("谢谢") || lilIlIl1.equityName.includes("再来")) continue;
+          $.msg.push("    " + lilIlIl1.equityName + " 共" + lilIlIl1.availableQuantity + "/" + lilIlIl1.freezeQuantity + "份");
+        }
+        if ($.domain.includes("gzsl-isv.isvjcloud.com")) {
+          $.msg.push("    " + (lilIlIl1.detail.includes("自定义奖品") ? lilIlIl1.name : lilIlIl1.detail));
+        }
+      }
+    }
+  } catch (I1iIIiIl) {
+    console.log(I1iIIiIl);
   }
-  $.msg.push("export M_WX_TEAM_URL=\"" + $.activityUrl + "\"");
+  $.msg.push("export M_WX_LUCK_DRAW_URL=\"" + $.activityUrl + "\"");
 };
-$.run({
-  "whitelist": ["1-9999"],
-  "multCenter": true,
-  "mod": centerIndex * 1
-}).catch(_0x4dcead => $.log(_0x4dcead));
+$.checkDrawTimes = function (lIIlI1Il, IlI1ll11, illiI1i) {
+  const I1I1I1Il = new RegExp(illiI1i),
+    l11iII11 = lIIlI1Il.match(I1I1I1Il);
+  if (l11iII11) {
+    const iI1ilIIi = +l11iII11[1],
+      lIlIli1 = +l11iII11[3],
+      Ili1lil1 = $.now("yyyy-MM-dd HH:mm:ss"),
+      Ill11Iil = differenceInDays(new Date(Ili1lil1.split(" ")[0]), new Date(IlI1ll11.split(" ")[0])),
+      liIIilii = Ill11Iil - 1;
+    if (liIIilii * iI1ilIIi - 1 > lIlIli1) {
+      return false;
+    }
+  }
+  return true;
+};
