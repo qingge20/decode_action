@@ -1,412 +1,367 @@
-//Wed Oct 09 2024 13:01:06 GMT+0000 (Coordinated Universal Time)
+//Fri Oct 11 2024 14:46:22 GMT+0000 (Coordinated Universal Time)
 //Base:https://github.com/echo094/decode-js
 //Modify:https://github.com/smallfawn/decode_action
-let skuIds = [];
-$.version = "v1.4.0";
+$.limit = 0;
+$.version = "v1.0.0";
 $.logic = async function () {
   if (!$.superVersion) {
     throw new Error("请更新脚本");
   }
-  $.isBreak = false;
-  $.bbbb = 0;
   if (!$.activityId || !$.activityUrl) {
     $.expire = true;
     $.putMsg("activityId|activityUrl不存在");
     return;
   }
   $.UA = $.ua();
-  let lIliIIl = await $.isvObfuscator();
-  if (lIliIIl.code !== "0") {
+  let IlIi1i11 = await $.isvObfuscator();
+  if (IlIi1i11.code !== "0") {
     $.putMsg("获取Token失败");
     return;
   }
-  if ($.jinggengTypes.includes($.domain)) {
-    let IlIiiIil = await $.api("front/setMixNick", "strTMMixNick=" + $.Token + "&userId=" + $.userId + "&source=01");
-    if (!IlIiiIil.succ) {
+  $.Token = IlIi1i11?.["token"];
+  if (["10079"].includes($.activityType)) {
+    await $.login();
+    let IIi1iI11 = {
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+        "Connection": "keep-alive",
+        "user-agent": $.UA,
+        "Referer": $.activityUrl,
+        "token": $.Token
+      },
+      i1iIliil = "https://" + $.domain + $.urlPrefix + "/api/pointsExchange/activity",
+      I11lIIll = await $.get(i1iIliil, IIi1iI11);
+    if (I11lIIll.resp_code !== 0) {
+      $.putMsg("获取奖品失败");
+      return;
+    }
+    $.prizeList = I11lIIll.data.pointsExchangePrizeVos || [];
+    let IiIIlIil = $.prizeList.filter(liIllI1 => liIllI1.stock !== 0);
+    if (IiIIlIil.length === 0) {
+      $.putMsg("垃圾或领完");
+      $.expire = true;
+      return;
+    }
+    let lilIl11l = I11lIIll.data.myPoints;
+    $.putMsg(lilIl11l + "积分");
+    let Il1I1Ii1 = $.prizeList.filter(l1i1lI1l => lilIl11l >= l1i1lI1l.num);
+    if (lilIl11l < $.prizeList[0].num) {
+      $.putMsg("积分不足");
+      return;
+    }
+    let ili1Illl = $.addressIndex;
+    for (let l1lIllll of Il1I1Ii1.reverse()) {
+      $.addressIndex = ili1Illl;
+      let Ii1ili11 = await $.api("/api/pointsExchange/exchange", {
+        "prizeInfoId": l1lIllll.prizeInfoId,
+        "status": 1
+      });
+      if (Ii1ili11.data?.["result"]) {
+        $.prizeName = Ii1ili11.data.prizeName;
+        lilIl11l -= l1lIllll.num;
+        Il1I1Ii1 = $.prizeList.filter(i1IllIi1 => lilIl11l >= i1IllIi1.num);
+        $.putMsg($.prizeName);
+        Ii1ili11.data.prizeType === 3 && ($.addressId = Ii1ili11.data.addressId, await $.saveAddress());
+      }
+    }
+    $.addressIndex++;
+    return;
+  }
+  if ($.domain.includes("jinggeng")) {
+    let Ii1i1I1 = await $.api("front/setMixNick", "strTMMixNick=" + $.Token + "&userId=" + $.userId + "&source=01");
+    if (!Ii1i1I1.succ) {
       $.putMsg("setMixNick失败");
       return;
     }
-    const l1l1iII = "showCart",
-      iiiI1111 = await $.api("ql/front/" + l1l1iII, "id=" + $.activityId + "&user_id=" + $.userId),
-      lIIIiI1l = cheerio.load(cheerio.load(iiiI1111).html());
-    $.shopId = lIIIiI1l("#shop_sid").val();
-    $.vender_id = lIIIiI1l("#vender_id").val();
-    $.shopName = lIIIiI1l("#shop_title").val();
-    $.rule = lIIIiI1l("#description").text();
-    $.actLog = lIIIiI1l("#act_log").text();
-    $.activityType = lIIIiI1l("#actType").val();
-    const lI1lllIl = /(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2})/g,
-      Iil1ll = $.rule.match(lI1lllIl),
-      l1i1Iill = Iil1ll[0],
-      I1ilI = Iil1ll[1];
-    $.runAll = !((!$.isBean || $.prizeNum < $.beanNumAll) && $.index > $.masterNum);
-    if (!$.runAll) {
-      $.putMsg("智能判断，停止运行");
-      $.expire = true;
-      return;
-    }
-    if (skuIds.length === 0) {
-      const iIIlllll = $.rule.match(/加购(\d+)个宝贝后可以获得(\d+)(.*);/);
-      if (iIIlllll) {
-        $.needAddNum = iIIlllll[1];
-        $.isBean = iIIlllll[3].includes("京豆");
-        $.prizeNum = iIIlllll[2];
-        $.prizeName = $.prizeNum + iIIlllll[3];
-        if ($.prizeName.match(/优惠券/)) {
-          this.expire = true;
-          $.putMsg("垃圾活动，" + $.prizeName);
-          return;
-        }
-        lIIIiI1l("div:contains(\"加购宝贝\")").each((iii1l1lI, l11I1i1i) => {
-          const llil1l = lIIIiI1l(l11I1i1i).attr("id");
-          if (llil1l) {
-            skuIds.push(llil1l);
-          }
-        });
-      }
-    }
-    $.actStartTime = new Date(l1i1Iill).getTime();
-    $.actEndTime = new Date(I1ilI).getTime();
-    if ($.actStartTime > $.timestamp()) {
-      $.putMsg("活动未开始");
-      $.expire = true;
-      return;
-    }
-    if ($.actEndTime < $.timestamp()) {
+    let III1ll1I = await $.api("ql/front/exchangeActDetail", "actId=" + $.activityId + "&userId=" + $.userId);
+    const IlIII1ii = cheerio.load(cheerio.load(III1ll1I).html());
+    if (III1ll1I.indexOf("活动已结束") !== -1) {
       $.putMsg("活动已结束");
       $.expire = true;
       return;
     }
-    if ($.actLog) {
-      let iIIi11Il = JSON.parse($.actLog);
-      if (iIIi11Il.isHandler) {
-        $.putMsg("已领取过");
-        return;
-      }
+    $.shopId = IlIII1ii("#shop_sid", "body").attr("value");
+    $.venderId = IlIII1ii("#vender_id", "body").attr("value");
+    $.shopName = IlIII1ii("#shop_title", "body").attr("value");
+    $.activityType = IlIII1ii("#actType", "body").attr("value");
+    $.rule = IlIII1ii("#description", "body").text();
+    $.startTime = $.parseDate($.match(/(\d+-\d+-\d+ \d+:\d+:\d+)-/, $.rule)).getTime();
+    $.actTimeStr = $.match(/(\d+-\d+-\d+ \d+:\d+:\d+-\d+-\d+-\d+ \d+:\d+:\d)/, $.rule);
+    if ($.activityType === "JD_GOODS" || $.activityType === "JD_COUPON" || $.activityType === "JD_POINTTOBUY") {
+      $.putMsg("垃圾或领完");
+      $.expire = true;
+      return;
     }
-    skuIds.length === 0 && $.putMsg("获取奖励异常");
-    for (let IliIII1I = 0; IliIII1I < skuIds.length; IliIII1I++) {
-      const ilIl1ii = skuIds[IliIII1I];
-      if (IliIII1I + 1 > $.needAddNum) {
-        $.log("加购完成");
-        break;
-      }
-      const ililI1il = await $.api("ql/front/postAddCart", "act_id=" + $.activityId + "&user_id=" + $.userId + "&itemId=" + ilIl1ii),
-        I1iIlIlI = ililI1il.msg;
-      if (ililI1il.succ && I1iIlIlI.startsWith("{")) {
-        try {
-          let IliIIiI1 = JSON.parse(I1iIlIlI);
-          if (IliIIiI1.isSendSucc && IliIIiI1.drawAwardDto) {
-            let I1ilIIil = IliIIiI1.drawAwardDto,
-              ilI1IiI1 = $.getAwardText(IliIIiI1.drawAwardDto);
-            $.putMsg(ilI1IiI1);
-            I1ilIIil.awardType === "JD_GOODS" && ($.addressId = IliIIiI1.actLogId, $.prizeName = ilI1IiI1, await $.saveAddress());
+    if ($.timestamp() < $.startTime) {
+      $.expire = true;
+      $.putMsg("未开始");
+      return;
+    }
+    let Iil1IiIi = $.rule.match(/(?<=每人可兑换)\d{1,2}/)[0] || "1";
+    for (i = 0; i < Iil1IiIi; i++) {
+      try {
+        let Il1II1ii = await $.api("ql/front/postQlExchange", "act_id=" + $.activityId + "&user_id=" + $.userId);
+        if (Il1II1ii.succ) {
+          let I1iiili = JSON.parse(Il1II1ii.msg);
+          if (I1iiili.isSendSucc && I1iiili.drawAwardDto) {
+            let lliIil1 = $.getAwardText(I1iiili.drawAwardDto);
+            $.putMsg(lliIil1);
+            if ($.activityType === "JD_GOODS") {
+              $.prizeName = lliIil1;
+              $.addressId = I1iiili.actLogId;
+              await $.saveAddress();
+            }
+          } else {
+            $.putMsg(Il1II1ii.msg);
             break;
-          } else $.log(I1iIlIlI);
-        } catch (Ii1li1i) {
-          $.putMsg(I1iIlIlI);
+          }
+        } else {
+          await $.wxStop(Il1II1ii.msg);
+          if (Il1II1ii.msg.includes("点的太快")) {
+            Iil1IiIi++;
+            await $.wait(2000, 4000);
+            continue;
+          }
+          if (Il1II1ii.msg.includes("奖品已经兑完了")) {
+            $.putMsg(Il1II1ii.msg);
+            $.expire = true;
+            return;
+          } else {
+            $.putMsg(Il1II1ii.msg);
+            break;
+          }
         }
-      } else {
-        if (I1iIlIlI.includes("加购成功但不需要发奖")) {
-          continue;
-        }
-        $.putMsg(I1iIlIlI);
-        if (I1iIlIlI.match(/只有部分会员才可以参加活动/)) {
-          break;
-        }
+        await $.wait(2000, 4000);
+      } catch (I11I1l) {
+        $.log(I11I1l);
       }
     }
-    await $.complete();
-    $.putMsg("未知异常");
-    return;
-  }
-  if ($.domain.includes("gzsl-isv.isvjcloud.com")) {
-    let li1Ilii1 = await $.api("wuxian/user/getGoodsGiftActivity/" + $.activityId, {
-      "venderId": $.activityId,
-      "token": $.Token,
-      "source": "01"
-    });
-    if (li1Ilii1.status !== "1" && (await $.wxStop(li1Ilii1?.["msg"]))) return;
-    $.log(li1Ilii1.activity.prizeSettings);
-    if (li1Ilii1.status !== "1") {
-      $.putMsg("获取礼包信息失败");
-      return;
-    }
-    $.shopName = li1Ilii1.activity.detail;
-    $.venderId = li1Ilii1.activity.venderId;
-    $.shopId = li1Ilii1.activity.shopId;
-    $.actStartTime = li1Ilii1.activity.startTime;
-    $.actEndTime = li1Ilii1.activity.endTime;
-    $.prizeList = li1Ilii1.activity.prizeSettings;
-    let iiilIlII = $.prizeList.filter(IiIlilIl => !["2"].includes(IiIlilIl.source));
-    if (iiilIlII.length === 0) {
-      $.putMsg("垃圾或领完");
-      $.expire = true;
-      return;
-    }
-    let IiIi111 = li1Ilii1.activity.id,
-      lii11i1 = await $.api("wuxian/user/getGoodsGiftPrizeAndWare/" + IiIi111 + "?wxToken=" + $.Token, {
-        "token": $.Token,
-        "wxToken": $.Token,
-        "activityId": IiIi111,
-        "source": "01"
-      });
-    lii11i1.status === "1" ? $.putMsg("" + lii11i1.data) : $.putMsg("" + lii11i1.msg);
-    return;
-  }
-  if ($.hdbTypes.includes($.domain)) {
-    await this.login();
-    let i1i11lii = await this.api("/front/activity/loadFrontItems", {}),
-      I1II1lII = await this.api("/front/activity/loadAddCartSetting", {});
-    $.prizeInfo = this.getAwardPrizeInfo(this.prizeList[0]);
-    $.runAll = !((!$.prizeInfo.isBean || $.prizeInfo.prizeNum < $.beanNumAll) && $.index > $.masterNum);
-    if (!$.runAll) {
-      $.putMsg("智能判断，停止运行");
-      $.expire = true;
-      return;
-    }
-    $.prizeName = this.getAwardText(this.prizeList[0]);
-    $.needAddNum = I1II1lII.result.addCartSetting.itemAmount;
-    if (I1II1lII.result.hasReceiveAward) {
-      this.putMsg("已经领取过了");
-      return;
-    }
-    for (let IiilIIlI = 0; IiilIIlI < $.needAddNum; IiilIIlI++) {
-      await this.reportActionLog({
-        "actionType": "addCart",
-        "skuId": i1i11lii.result[IiilIIlI].skuId
-      });
-      skuIds.push(i1i11lii.result[IiilIIlI].skuId);
-    }
-    let ilIlIIIi = await this.api("/front/activity/postAddCartFrontAct", {});
-    if (ilIlIIIi.result?.["succ"]) {
-      this.putMsg($.prizeName);
-    } else this.putMsg(ilIlIIIi.message || "未知结果");
-    await $.complete();
-    return;
-  }
-  if ($.activityType === "10024") {
-    await this.login();
-    let I11lIili = $.prizeList.filter(lIiIIl1I => lIiIIl1I.prizeType === 1 && lIiIIl1I.beanNum >= $.openCardBeanNum);
-    $.prizeName = $.prizeList[0].prizeName;
-    $.runAll = !($.prizeList.some(Iil1iil => Iil1iil.prizeType === 1 && Iil1iil.beanNum < $.beanNumAll) && $.index > $.masterNum);
-    if (!$.runAll) {
-      $.putMsg("智能判断，停止运行");
-      $.expire = true;
-      return;
-    }
-    let liIII1l = I11lIili.length === 1,
-      llIl1II = await $.api("/api/task/addSku/activity", {});
-    if (llIl1II.resp_code !== 0) {
-      $.putMsg("获取活动失败");
-      return;
-    }
-    let Iilillll = llIl1II.data.addWares.status,
-      IiI1iI1I = llIl1II.data.addWares.taskId;
-    $.needAddNum = llIl1II.data.addWares.finishNum;
-    if (Iilillll === 1) {
-      $.putMsg("已经领过");
-      await $.complete();
-      return;
-    }
-    let Ilii1Iii = llIl1II.data.prizeResultNum;
-    if (Ilii1Iii === 0) {
-      $.putMsg("垃圾或领完");
-      $.expire = true;
-      return;
-    }
-    skuIds = $.randomArray(llIl1II.data.addWares.skuInfoVO.map(liIlilil => liIlilil.skuId + ""), $.needAddNum);
-    let Ii1IlII1 = await $.api("/api/task/addSku/toDo", {
-      "taskId": IiI1iI1I,
-      "skuId": skuIds[0]
-    });
-    if (Ii1IlII1.resp_code !== 0) {
-      if (Ii1IlII1.resp_msg.includes("会员") && liIII1l) $.putMsg("现在去开卡"), await $.openCard();else {
-        $.putMsg(Ii1IlII1.resp_msg);
-        await $.wxStop(Ii1IlII1.resp_msg);
-        return;
-      }
-    } else {
-      if (Ii1IlII1?.["data"] && Ii1IlII1.data.status === 1) {
-        $.putMsg($.prizeName);
-        Ii1IlII1.data.prizeType === 3 && ($.addressId = Ii1IlII1.data.addressId, await $.saveAddress());
-        return;
-      }
-    }
-    for (let l11IIi1l of skuIds) {
-      Ii1IlII1 = await $.api("/api/task/addSku/toDo", {
-        "taskId": IiI1iI1I,
-        "skuId": l11IIi1l
-      });
-      if (Ii1IlII1.resp_msg.includes("任务已做过")) continue;
-      if (Ii1IlII1.resp_code !== 0) {
-        $.putMsg(Ii1IlII1.resp_msg);
-        if (/(会员等级不足)/.test(Ii1IlII1.resp_msg)) {
-          break;
-        }
-      }
-      if (Ii1IlII1?.["data"]) {
-        $.putMsg(Ii1IlII1.data.prizeName);
-        if (Ii1IlII1.data.prizeType === 3) {
-          $.addressId = Ii1IlII1.data.addressId;
-          await $.saveAddress();
-        }
-        break;
-      }
-    }
-    await $.complete();
     return;
   }
   await $.getSimpleActInfoVo();
   if ($.expire) {
     return;
   }
+  $.shopName = (await $.getShopInfo())?.["shopName"] || "未知";
   await $.getMyPing();
   if (!$.Pin) return;
-  $.shopName = (await $.getShopBaseInfo())?.["shopName"] || "未知";
-  if (!$.shopName) {
-    $.log("商店名称:" + $.shopName);
-    if ($.shopName.includes("成人") || $.shopName.includes("情趣")) {
-      $.putMsg("商店黑名单，不跑了");
-      $.expire = true;
+  await $.accessLog();
+  let iiI1iI1l = await $.api("mc/wxPointShop/getBuyerPoints", "venderId=" + $.venderId + "&buyerPin=" + $.Pin);
+  $.beansLevel = parseInt(iiI1iI1l.data?.["grade"] || "1");
+  $.buyerPoints = parseInt(iiI1iI1l.data?.["buyerPoints"] || "0");
+  $.putMsg("等级" + $.beansLevel + "," + $.buyerPoints + "积分");
+  if ($.buyerPoints <= 0) {
+    $.putMsg("没有积分");
+    $.limit++;
+    $.limit >= $.masterNum && $.putMsg("屏蔽兑换");
+    return;
+  }
+  if ($.beansLevel === 1 && $.needPoint && $.buyerPoints < $.needPoint) {
+    $.putMsg("需要" + $.needPoint + "积分");
+    ++$.limit >= $.masterNum && $.putMsg("屏蔽兑换");
+    return;
+  }
+  let i11ll1lI;
+  if ($.activityUrl.includes("pointExgECard")) i11ll1lI = await $.api("mc/equity/selectEquityForC", "giftId=" + $.activityId + "&venderId=" + $.venderId + "&buyerPin=" + $.Pin);else {
+    if ($.activityUrl.includes("pointExgHb")) i11ll1lI = await $.api("mc/hb/selectHbForC", "giftId=" + $.activityId + "&venderId=" + $.venderId + "&buyerPin=" + $.Pin);else {
+      if ($.activityUrl.includes("pointExgShiWu")) {
+        for (let li1liIl1 of $.notPointDrawList) {
+          $.shopName.includes(li1liIl1) && ($.expire = true, $.putMsg("已屏蔽"));
+        }
+        i11ll1lI = await $.api("mc/shiWu/selectShiWu", "giftId=" + $.activityId + "&venderId=" + $.venderId);
+      } else {
+        if ($.activityUrl.includes("pointExgBeans")) {
+          if ($.shopName.includes("同仁堂")) {
+            $.expire = true;
+            $.putMsg("已屏蔽");
+          }
+          i11ll1lI = await $.api("mc/beans/selectBeansForC", "giftId=" + $.activityId + "&venderId=" + $.venderId + "&buyerPin=" + $.Pin + "&beansLevel=" + $.beansLevel);
+        }
+      }
+    }
+  }
+  if (!i11ll1lI.result) {
+    $.putMsg(i11ll1lI?.["errorMessage"]);
+    return;
+  }
+  $.rule = i11ll1lI.data?.["mcGiftBaseInfo"]?.["actrule"] || i11ll1lI.data.actrule;
+  $.actTimeStr = $.match(/(\d{4}(-\d{2}){2}(\s\d{2}(:\d{2}){1,2})[\s\S]*至[\s\S]*\d{4}(-\d{2}){2}(\s\d{2}(:\d{2}){1,2}))/, $.rule)[0] || "长期";
+  $.timeLimit = JSON.parse(i11ll1lI.data?.["mcConfig"]?.["timeLimitJson"] || "[]");
+  $.giftName = "";
+  if ($.activityUrl.includes("pointExgShiWu")) {
+    $.rule = i11ll1lI.data.mcGiftBaseInfo.actrule;
+    $.upTime = i11ll1lI.data.mcGiftBaseInfo.upTime;
+    $.downTime = i11ll1lI.data.mcGiftBaseInfo.downTime;
+    $.giftName = i11ll1lI.data.mcGiftBaseInfo.giftName;
+    $.mcShiWu = i11ll1lI.data.mcShiWu;
+    $.num = i11ll1lI.data.mcGiftBaseInfo.num === i11ll1lI.data.mcGiftBaseInfo.usedNum;
+    $.needPoint = i11ll1lI.data.mcGiftBaseInfo["point" + $.beansLevel];
+    if ($.needPoint === null) {
+      $.putMsg("等级不符");
+      $.index === 2 ? $.expire = true : "";
+      return;
+    }
+  } else {
+    $.rule = i11ll1lI.data.actrule;
+    $.upTime = i11ll1lI.data.upTime;
+    $.downTime = i11ll1lI.data.downTime;
+    $.num = i11ll1lI.data.num === i11ll1lI.data.usedNum;
+    $.needPoint = i11ll1lI.data["point" + $.beansLevel];
+    $.giftName = i11ll1lI.data.giftName;
+    if ($.needPoint === null) {
+      $.putMsg("等级不符");
+      $.index === 2 ? $.expire = true : "";
+      return;
+    }
+    i11ll1lI.data.beansLevelCount > 0 && ($.needPoint = i11ll1lI.data["point" + $.beansLevel] * i11ll1lI.data.beansLevelCount);
+  }
+  if ($.needPoint > $.buyerPoints) {
+    $.putMsg("需要" + $.needPoint + "积分");
+    $.limit++;
+    return;
+  }
+  if ($.expire) {
+    return;
+  }
+  if ($.num) {
+    $.expire = true;
+    $.putMsg("明日再来");
+    return;
+  }
+  for (let iI1Iiiii of $.notPointDrawGiftNameList) {
+    if ($.giftName.includes(iI1Iiiii)) {
+      this.expire = true;
+      $.putMsg("屏蔽兑换");
       return;
     }
   }
-  await $.accessLog();
-  let lIIilliI = await $.api("wxCollectionActivity/activityContent", "activityId=" + $.activityId + "&pin=" + $.Pin),
-    Iilil1ii = lIIilliI.data;
-  if (!lIIilliI.result || !Iilil1ii) {
-    $.putMsg(lIIilliI.errorMessage);
-    return;
-  }
-  $.rule = Iilil1ii.rule;
-  $.actStartTime = Iilil1ii.startTime;
-  $.actEndTime = Iilil1ii.endTime;
-  await $.getRuleSETime($.rule);
-  let lli1Ilii = [6, 7, 9, 13, 14, 15, 16];
-  if ($.index > $.masterNum) {
-    lli1Ilii = [6];
-  }
-  if (!lli1Ilii.includes(Iilil1ii.drawInfo.drawInfoType)) {
-    $.putMsg("垃圾或领完");
+  if ($.timestamp() >= $.downTime) {
     $.expire = true;
+    $.putMsg("活动已结束");
     return;
   }
-  let iiI11iI1 = Iilil1ii.drawInfo.drawInfo;
-  $.runAll = !((iiI11iI1.type !== 6 || iiI11iI1.beanNum < $.beanNumAll) && $.index > $.masterNum);
-  console.log("$.runAll" + $.runAll + "$.masterNum" + $.masterNum);
-  if (!$.runAll) {
-    $.putMsg("智能判断，停止运行");
+  if ($.timestamp() < $.upTime) {
     $.expire = true;
+    $.putMsg("活动未开始");
     return;
   }
-  $.prizeName = Iilil1ii.drawInfo.name;
-  $.needAddNum = Iilil1ii.needCollectionSize || 1;
-  let ii1Ill1l = Iilil1ii.oneKeyAddCart * 1 === 1;
-  $.isOpenCard = iiI11iI1.type === 6 && iiI11iI1.beanNum >= $.openCardBeanNum;
-  if (Iilil1ii.cpvos.length < $.needAddNum) {
-    $.putMsg("商品数量异常");
-    $.expire = true;
+  if ($.activityUrl.includes("pointExgHb")) {
+    let i1ll = await $.api("mc/wxPointShop/exgHB", "giftId=" + $.activityId + "&venderId=" + $.venderId + "&buyerPin=" + $.Pin);
+    console.log(i1ll);
+    $.putMsg("" + (i1ll.errorMessage || "兑换成功"));
     return;
   }
-  skuIds = $.randomArray(Iilil1ii.cpvos.filter(ilI1Ill => !ilI1Ill.collection).map(iiII1ii => iiII1ii.skuId + "")).reverse();
-  let iIilIli = 0,
-    ll1Ii1 = false,
-    iIIiliIl = "";
-  for (let iililIi1 = 0; iililIi1 < skuIds.length && !ii1Ill1l; iililIi1++) {
-    let l1lIilll = await this.api("wxCollectionActivity/" + ($.activityType * 1 === 5 ? "collection" : "addCart"), "activityId=" + $.activityId + "&pin=" + $.Pin + "&productId=" + skuIds[iililIi1]);
-    if (l1lIilll.result) {
-      iIilIli = l1lIilll.data.hasAddCartSize;
-      if (l1lIilll.data.hasAddCartSize >= $.needAddNum) {
-        $.log("加购完成，本次加购" + l1lIilll.data.hasAddCartSize + "个商品");
-        ll1Ii1 = true;
+  if ($.activityUrl.includes("pointExgECard")) {
+    let lil11ii1 = await $.api("/mc/wxPointShop/exgECard", "giftId=" + $.activityId + "&venderId=" + $.venderId + "&buyerPin=" + $.Pin + "&buyerNick=" + encodeURIComponent($.nickname));
+    console.log(lil11ii1);
+    $.putMsg("" + (lil11ii1.errorMessage || "兑换成功"));
+    return;
+  }
+  if ($.activityUrl.includes("pointExgShiWu")) {
+    let iiIIllii = await $.api("mc/wxPointShop/selectAddressList", "venderId=" + $.venderId + "&buyerPin=" + $.Pin);
+    if (iiIIllii.ok && iiIIllii.count >= 1) for (let i1iIiI1i of iiIIllii.data) {
+      let llIllIIi = await $.api("mc/wxPointShop/deleteAddress", "venderId=" + $.venderId + "&buyerPin=" + $.Pin + "&addressId=" + i1iIiI1i.addressId);
+      console.log(llIllIIi);
+    }
+    if ($.addressIndex > $.accountAddressList.length) {
+      $.addressIndex = 1;
+    }
+    let ll1liIii = $.accounts[$.username]?.["address"];
+    if (!ll1liIii) {
+      $.putMsg("没有配置地址信息");
+      return;
+    }
+    let IiI1i1l = await $.api("/mc/wxPointShop/saveAddress", "buyerPin=" + $.Pin + "&venderId=" + $.venderId + "&receiver=" + encodeURIComponent(ll1liIii.receiver) + "&receiverPhone=" + ll1liIii.phone + "&province=" + encodeURIComponent(ll1liIii.province) + "&city=" + encodeURIComponent(ll1liIii.city) + "&county=" + encodeURIComponent(ll1liIii.county) + "&address=" + encodeURIComponent(ll1liIii.address));
+    IiI1i1l.result && IiI1i1l.data ? ($.addressId = IiI1i1l.data.addressId, $.putMsg("已填地址")) : $.putMsg("" + (IiI1i1l.errorMessage || "未知原因"));
+    console.log(IiI1i1l);
+    let iiIIllIl = 0;
+    while (iiIIllIl < 10) {
+      iiIIllIl++;
+      let Il11ilii = await $.api("/mc/wxPointShop/exgShiWu", "buyerPin=" + $.Pin + "&buyerNick=" + encodeURIComponent($.nickname) + "&giftId=" + $.activityId + "&venderId=" + $.venderId + "&addressId=" + $.addressId);
+      if (Il11ilii.result) {
+        $.putMsg("兑换成功");
+        await fs.appendFileSync("gifts.csv", $.now() + "," + $.giftName + "," + $.shopName + "," + $.username + "," + ll1liIii.phone + "," + ll1liIii.address + "," + $.name + "," + $.activityUrl + "\n");
         break;
       }
-    } else {
-      if (l1lIilll.errorMessage.includes("店铺会员")) {
-        if ($.isOpenCard) {
-          await $.openCard();
-          l1lIilll = await $.api("wxCollectionActivity/addCart", "activityId=" + $.activityId + "&pin=" + $.Pin + "&productId=" + Iilil1ii.cpvos[iililIi1].skuId);
-          if (l1lIilll.result) {
-            if (l1lIilll.data.hasAddCartSize >= $.needAddNum) {
-              $.log("加购完成，本次加购" + l1lIilll.data.hasAddCartSize + "个商品");
-              break;
-            }
-          }
-          $.putMsg("" + (l1lIilll.errorMessage || "未知"));
-        }
-        $.putMsg("" + l1lIilll.errorMessage);
-        break;
-      } else {
-        if (iIIiliIl === l1lIilll.errorMessage) continue;
-        iIIiliIl = l1lIilll.errorMessage;
-        await $.wxStop(l1lIilll.errorMessage);
-        $.putMsg("" + (l1lIilll.errorMessage || "未知"));
-        if ($.expire) break;
-        if (/(超出关注数量上限)/.test(l1lIilll.errorMessage)) break;
-      }
-    }
-  }
-  if (ii1Ill1l) {
-    let iIi11Ill = await $.api("wxCollectionActivity/oneKeyAddCart", "activityId=" + $.activityId + "&pin=" + $.Pin + "&productIds=" + encodeURIComponent(JSON.stringify(skuIds)));
-    if (iIi11Ill.result && iIi11Ill.data) $.log("加购完成，本次加购" + iIi11Ill.data.hasAddCartSize + "个商品"), ll1Ii1 = true;else {
-      if (iIi11Ill.errorMessage.includes("店铺会员")) {
-        if ($.isOpenCard) {
-          await $.openCard();
-          iIi11Ill = await $.api("wxCollectionActivity/oneKeyAddCart", "activityId=" + $.activityId + "&pin=" + $.Pin + "&productIds=" + encodeURIComponent(JSON.stringify(skuIds)));
-          if (iIi11Ill.result) {
-            iIi11Ill.data.hasAddCartSize >= $.needAddNum && $.log("加购完成，本次加购" + iIi11Ill.data.hasAddCartSize + "个商品");
-          }
-          $.putMsg("" + (iIi11Ill.errorMessage || "未知"));
-        } else {
-          $.putMsg("" + iIi11Ill.errorMessage);
-        }
-      } else await $.wxStop(iIi11Ill.errorMessage), $.putMsg("" + (iIi11Ill.errorMessage || "未知"));
-    }
-  }
-  if (!ll1Ii1) try {
-    await $.api("wxCollectionActivity/addCart", "activityId=" + $.activityId + "&pin=" + $.Pin + "&productId=" + Iilil1ii.cpvos[0].skuId);
-    ll1Ii1 = true;
-  } catch (liiii1l) {}
-  if ($.expire) return;
-  for (let ilIl1l1I = 0; ilIl1l1I < 10; ilIl1l1I++) {
-    try {
-      let I1liIili = await $.api("wxCollectionActivity/getPrize", "activityId=" + $.activityId + "&pin=" + $.Pin);
-      if (I1liIili.result) {
-        I1liIili.data.drawOk ? ($.addressId = I1liIili.data.addressId, $.prizeName = I1liIili.data.name, $.putMsg($.prizeName), I1liIili.data.drawInfoType === 7 && I1liIili.data.needWriteAddress === "y" && (await $.saveAddress())) : ($.putMsg(I1liIili.data.errorMessage), await $.wxStop(I1liIili.data.errorMessage));
-        await $.complete();
-        break;
-      } else {
-        if (/(未达到领奖条件)/.test(I1liIili.errorMessage)) {
-          this.putMsg("" + I1liIili.errorMessage);
-          break;
-        }
-        if (/(您已领过奖了|非法操作)/.test(I1liIili.errorMessage)) {
-          this.putMsg("" + I1liIili.errorMessage);
-          break;
-        }
-        await $.wxStop(I1liIili.errorMessage);
-        $.putMsg("" + (I1liIili.errorMessage || "未知"));
+      if (Il11ilii.errorMessage.includes("火爆")) continue;
+      if (Il11ilii.errorMessage.includes("未到每天兑换时间")) {
+        $.putMsg("未到每天兑换时间");
+        $.expire = true;
         break;
       }
-    } catch (li11liiI) {
-      $.log(li11liiI);
+      if (Il11ilii.errorMessage.includes("请明日再来") || Il11ilii.errorMessage.includes("请明天再来")) {
+        $.putMsg("请明日再来");
+        $.expire = true;
+        break;
+      }
+      if (Il11ilii.errorMessage.includes("积分不足") || Il11ilii.errorMessage.includes("等级不符")) {
+        $.index === 2 ? $.expire = true : "";
+        $.putMsg("" + Il11ilii.errorMessage);
+        break;
+      }
+      if (await $.wxStop(Il11ilii.errorMessage)) {
+        $.putMsg("" + Il11ilii.errorMessage);
+        break;
+      }
+    }
+    return;
+  }
+  $.exgBeanNum = parseInt($.buyerPoints / i11ll1lI.data["point" + $.beansLevel]);
+  if (i11ll1lI.data.canExgByPeopDay && $.exgBeanNum > i11ll1lI.data.canExgByPeopDay) $.exgBeanNum = i11ll1lI.data.canExgByPeopDay;else {
+    if (!$.beansLevelCount) {
+      $.beansLevelCount = i11ll1lI.data.beansLevelCount;
+      if ($.exgBeanNum < $.beansLevelCount) {
+        $.putMsg("积分不足0");
+        $.index === 2 ? $.expire = true : "";
+        return;
+      }
+      $.exgBeanNum = i11ll1lI.data.beansLevelCount === 0 ? $.exgBeanNum : i11ll1lI.data.beansLevelCount;
     }
   }
-  skuIds.length > 0 ? await $.carRmv(skuIds) : "";
+  if ($.exgBeanNum <= 0) {
+    $.putMsg("积分不足1");
+    $.index === 2 ? $.expire = true : "";
+    return;
+  }
+  let lli1iI1 = 0;
+  while (lli1iI1 < 10) {
+    lli1iI1++;
+    let ilI1liiI = await $.api("mc/wxPointShop/exgBeans", "buyerPin=" + $.Pin + "&buyerNick=&giftId=" + $.activityId + "&venderId=" + $.venderId + "&beansLevel=" + $.beansLevel + "&exgBeanNum=" + $.exgBeanNum);
+    if (ilI1liiI.result) {
+      $.putMsg($.exgBeanNum + "京豆");
+      break;
+    }
+    if (ilI1liiI.errorMessage.includes("火爆")) continue;
+    if (ilI1liiI.errorMessage.includes("积分不足") || ilI1liiI.errorMessage.includes("每人每日兑换最大上限") || ilI1liiI.errorMessage.includes("等级不符")) {
+      $.putMsg("" + ilI1liiI.errorMessage);
+      break;
+    }
+    if (await $.wxStop(ilI1liiI.errorMessage)) {
+      $.putMsg("" + ilI1liiI.errorMessage);
+      break;
+    }
+  }
 };
 $.after = async function () {
   try {
-    this.msg.push("    加" + $.needAddNum + "件," + ($.prizeName || this.prizeList && this.prizeList[0]?.["prizeName"] || ""));
-  } catch (ilIiI11I) {
-    $.log(ilIiI11I);
+    if ($.domain.includes("jinggeng")) $.msg.push("\n" + ($.rule || "\n未知"));else {
+      if ($.activityUrl.includes("pointExgShiWu")) {
+        $.mcShiWu?.["takeBeginTime"] ? $.msg.push("    兑换时间:" + ($.mcShiWu?.["takeBeginTime"] || "") + "，每天:" + ($.mcShiWu?.["dayNum"] || "") + "件") : "";
+      }
+    }
+    for (let ilIiiiil of $.timeLimit || []) {
+      ilIiiiil.timeLimitStartDay === $.formatDateTime(new Date(), "yyyy-MM-dd") && $.msg.push("    兑换时间:" + (ilIiiiil.timeLimitStartTime || ""));
+    }
+    for (let ill1III of $.timeLimit || []) {
+      $.msg.push("    " + ill1III.timeLimitStartDay + "至" + ill1III.timeLimitEndDay);
+      $.msg.push("    " + ill1III.timeLimitStartTime + "至" + ill1III.timeLimitEndTime + "  " + ill1III.timeLimitNum + "份");
+    }
+    if ($.giftName) $.msg.push("    " + ($.giftName || "") + " 库存:" + $.num);else for (let lIliIii of $.prizeList) {
+      $.msg.push("    " + lIliIii.prizeName + " 库存:" + lIliIii.stock + " 需要:" + lIliIii.num);
+    }
+  } catch (lIIIlili) {
+    console.log(lIIIlili);
   }
-  console.log($.rule);
-  $.msg.push("export M_WX_ADD_CART_URL=\"" + $.activityUrl + "\"");
+  $.msg.push($.rule);
+  $.msg.push("export M_WX_POINT_DRAW_URL=\"" + $.activityUrl + "\"");
 };
-async function adds(I1liilii, i1iiiill = 0) {
-  let iIiIlIIi = await $.api("wxCollectionActivity/oneKeyAddCart", "activityId=" + $.activityId + "&pin=" + $.Pin + "&productIds=" + encodeURIComponent(JSON.stringify(I1liilii)));
-  if (iIiIlIIi.result && iIiIlIIi.data) {
-    $.log("加购完成，本次加购" + iIiIlIIi.data.hasAddCartSize + "个商品");
-  } else iIiIlIIi.errorMessage.includes("会员") && i1iiiill === 0 && $.isOpenCard ? (await $.openCard(), await adds(I1liilii, 1)) : (await $.wxStop(iIiIlIIi.errorMessage), $.putMsg("" + (iIiIlIIi.errorMessage || "未知")));
-}
