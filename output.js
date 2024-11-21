@@ -1,4 +1,4 @@
-//Wed Nov 20 2024 15:48:40 GMT+0000 (Coordinated Universal Time)
+//Thu Nov 21 2024 14:42:03 GMT+0000 (Coordinated Universal Time)
 //Base:https://github.com/echo094/decode-js
 //Modify:https://github.com/smallfawn/decode_action
 function mgJJPG() {}
